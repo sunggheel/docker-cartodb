@@ -5,10 +5,14 @@ FROM ubuntu:18.04
 LABEL maintainer="Stefan Verhoeven <s.verhoeven@esciencecenter.nl>"
 
 # Configuring locales
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && apt-get install -y -q apt-utils software-properties-common locales && dpkg-reconfigure locales && \
+ENV DEBIAN_FRONTEND=noninteractive
+ENV APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
+RUN apt-get update && apt-get install -y -q wget apt-utils software-properties-common locales && dpkg-reconfigure locales && \
       locale-gen en_US.UTF-8 && \
-      update-locale LANG=en_US.UTF-8
+      update-locale LANG=en_US.UTF-8 && \
+      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+      echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+      add-apt-repository -y ppa:ubuntugis/ppa
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
@@ -48,35 +52,34 @@ RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
     libgeos-c1v5 \
     libgeos-dev \
     libjson-c-dev \
-    python-simplejson \
+    python3-simplejson \
     proj-bin \
     proj-data \
     libproj-dev \
     gdal-bin \
     libgdal-dev \
-    postgresql-10 \
-    postgresql-client-10 \
-    postgresql-contrib-10 \
-    postgresql-server-dev-10 \
-    postgresql-plpython-10 \
-    postgresql-10-plproxy \
-    postgresql-10-postgis-2.4 \
-    postgresql-10-postgis-scripts \
+    postgresql-12 \
+    postgresql-client-12 \
+    postgresql-contrib-12 \
+    postgresql-server-dev-12 \
+    postgresql-plpython3-12 \
+    postgresql-12-plproxy \
+    postgresql-12-postgis-3 \
+    postgresql-12-postgis-3-scripts \
     postgis \
     liblwgeom-2.4-0 \
     ca-certificates \
     redis-server \
-    python2.7-dev \
-    python-setuptools \
+    python3.6-dev \
+    python3-setuptools \
     imagemagick \
     libmapnik-dev \
     mapnik-utils \
-    python-mapnik \
-    python-argparse \
-    python-gdal \
-    python-chardet \
-    python-all-dev \
-    python-docutils \
+    python3-mapnik \
+    python3-gdal \
+    python3-chardet \
+    python3-all-dev \
+    python3-docutils \
     openssl \
     libreadline7 \
     zlib1g \
@@ -104,11 +107,13 @@ RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
     libgif-dev \
     libgmp-dev \
     libicu-dev \
-    wget \
     nginx-light \
     net-tools \
     ruby2.5-dev \
     xz-utils \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
@@ -133,22 +138,25 @@ RUN curl https://nodejs.org/dist/v10.15.3/node-v10.15.3-linux-x64.tar.xz |tar -J
   rm -r /tmp/npm-* /root/.npm
 
 # Setting PostgreSQL
-RUN sed -i 's/\(peer\|md5\)/trust/' /etc/postgresql/10/main/pg_hba.conf && \
+RUN sed -i 's/\(peer\|md5\)/trust/' /etc/postgresql/12/main/pg_hba.conf && \
     service postgresql start && \
     createuser publicuser --no-createrole --no-createdb --no-superuser -U postgres && \
     createuser tileuser --no-createrole --no-createdb --no-superuser -U postgres && \
+    echo 'create extension plpython3u' | psql -U postgres postgres && \
     service postgresql stop
 
 # Crankshaft: CARTO Spatial Analysis extension for PostgreSQL
 RUN cd / && \
-    curl https://bootstrap.pypa.io/get-pip.py | python && \
+    curl https://bootstrap.pypa.io/get-pip.py | python3 && \
     git clone https://github.com/CartoDB/crankshaft.git && \
     cd /crankshaft && \
     git checkout $CRANKSHAFT_VERSION && \
+    ln -s /usr/include/locale.h /usr/include/xlocale.h && \
+    pip3 install --no-cache-dir scipy && \
     make install && \
     # Numpy gets upgraded after scikit-learn is installed
     # make sure scikit-learn is compatible with currently installed numpy, by reinstalling
-    pip install --force-reinstall --no-cache-dir scikit-learn==0.17.0 && \
+    pip3 install --force-reinstall --no-cache-dir scikit-learn==0.17.0 && \
     cd ..
 
 # Initialize template postgis db
@@ -183,8 +191,8 @@ RUN git clone --recursive git://github.com/CartoDB/cartodb.git && \
     cd - && \
     npm install && \
     rm -r /tmp/npm-* /root/.npm && \
-    perl -pi -e 's/gdal==1\.10\.0/gdal==2.2.2/' python_requirements.txt && \
-    pip install --no-binary :all: -r python_requirements.txt && \
+    perl -pi -e 's/gdal==2\.2\.2/gdal==2.4.2/;s/redis==2\.4\.9/redis==2.7.3/;' python_requirements.txt && \
+    pip3 install --no-binary :all: -r python_requirements.txt && \
     gem install bundler --version=1.17.3 && gem install compass archive-tar-minitar rack && \
     bundle update thin && \
     /bin/bash -l -c 'bundle install' && \
@@ -203,7 +211,7 @@ RUN git clone https://github.com/CartoDB/data-services.git && \
   git checkout $DATAERVICESAPI_VERSION && \
   PGUSER=postgres make install && \
   cd ../lib/python/cartodb_services && \
-  pip install -r requirements.txt && pip install . && \
+  pip3 install -r requirements.txt && pip3 install . && \
   cd ../../../../client && PGUSER=postgres make install
 
 # Observatory extension
