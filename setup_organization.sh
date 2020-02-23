@@ -8,6 +8,8 @@ bundle exec rake cartodb:db:set_unlimited_table_quota["${USERNAME}"]
 bundle exec rake cartodb:db:create_new_organization_with_owner ORGANIZATION_NAME="${ORGANIZATION_NAME}" USERNAME="${USERNAME}" ORGANIZATION_SEATS=100 ORGANIZATION_QUOTA=102400 ORGANIZATION_DISPLAY_NAME="${ORGANIZATION_NAME}"
 bundle exec rake cartodb:db:set_organization_quota[$ORGANIZATION_NAME,5000]
 bundle exec rake cartodb:db:configure_geocoder_extension_for_organizations[$ORGANIZATION_NAME]
+# Set import limit to 200Mb and 4M rows
+bundle exec rake cartodb:set_custom_limits_for_user[$ORGANIZATION_NAME,209715200,4000000,5]
 
 # Enable sync tables
 echo "UPDATE users SET sync_tables_enabled=true WHERE username='${USERNAME}'" | psql -U postgres -t carto_db_development

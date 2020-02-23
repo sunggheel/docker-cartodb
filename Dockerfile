@@ -66,6 +66,7 @@ RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
     postgresql-12-plproxy \
     postgresql-12-postgis-3 \
     postgresql-12-postgis-3-scripts \
+    postgresql-12-mysql-fdw \
     postgis \
     liblwgeom-2.4-0 \
     ca-certificates \
@@ -115,6 +116,7 @@ RUN useradd -m -d /home/cartodb -s /bin/bash cartodb && \
     liblapack-dev \
     gfortran \
   --no-install-recommends && \
+  apt-get upgrade -y -q && \
   rm -rf /var/lib/apt/lists/*
 
 RUN git config --global user.email you@example.com
@@ -166,8 +168,9 @@ RUN cd / && \
     pip3 install --no-cache-dir scipy && \
     make install && \
     # Numpy gets upgraded after scikit-learn is installed
+    # `import sklearn` fails with `RuntimeError: module compiled against API version 0xb but this version of numpy is 0xa` and `ImportError: numpy.core.multiarray failed to import`
     # make sure scikit-learn is compatible with currently installed numpy, by reinstalling
-    pip3 install --force-reinstall --no-cache-dir scikit-learn==0.17.0 && \
+    pip3 install --force-reinstall --no-cache-dir scipy==0.17.0 scikit-learn==0.17.0 && \
     cd ..
 
 # Initialize template postgis db
@@ -196,7 +199,7 @@ RUN git clone --recursive git://github.com/CartoDB/cartodb.git && \
     git checkout $CARTODB_VERSION && \
     # Install cartodb extension
     cd lib/sql && \
-    PGUSER=postgres make install && \
+    PGUSER=postgres make all install && \
     service postgresql start && /bin/su postgres -c \
       /tmp/cartodb_pgsql.sh && service postgresql stop && \
     cd - && \
