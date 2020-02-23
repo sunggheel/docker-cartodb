@@ -5,7 +5,7 @@ defaults: &defaults
   #  https:            "https.cdn.host"
   http_client_logs: true
   ogr2ogr:
-    binary:           'which ogr2ogr'
+    binary:           'which ogr2ogr2'
     csv_guessing:     true
     memory_limit:
   debug_assets: true

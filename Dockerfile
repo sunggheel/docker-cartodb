@@ -131,6 +131,17 @@ RUN cd /opt && \
     cd /opt && \
     rm -rf varnish-3.0.7 varnish-3.0.7.tgz
 
+# ogr2ogr2 static build, OS ships with gdal 2.4.2 which misses support for PG12
+RUN cd /opt && \
+    curl http://download.osgeo.org/gdal/2.4.4/gdal-2.4.4.tar.gz -o gdal-2.4.4.tar.gz && \
+    tar -zxf gdal-2.4.4.tar.gz && \
+    cd gdal-2.4.4 && \
+    ./configure --disable-shared && \
+    make -j 4 && \
+    cp apps/ogr2ogr /usr/bin/ogr2ogr2 && \
+    cd /opt && \
+    rm -rf /opt/ogr2ogr2 /opt/gdal-2.4.4.tar.gz /root/.gitconfig /opt/gdal-2.4.4
+
 # Install NodeJS
 RUN curl https://nodejs.org/dist/v10.15.3/node-v10.15.3-linux-x64.tar.xz |tar -Jxf - --strip-components=1 -C /usr && \
   npm install -g grunt-cli && \
@@ -249,7 +260,7 @@ RUN mkdir -p /cartodb/log && touch /cartodb/log/users_modifications && \
 
 EXPOSE 80
 
-ENV GDAL_DATA /usr/share/gdal/2.2
+ENV GDAL_DATA /usr/share/gdal
 
 # Number of seconds between a sync tables task is run
 # Default interval is an hour, use `docker run -e SYNC_TABLES_INTERVAL=60 ...` to change it
