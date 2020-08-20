@@ -242,9 +242,7 @@ ADD ./geocoder_server.sql /cartodb/script/geocoder_server.sql
 ADD ./fill_geocoder.sh /cartodb/script/fill_geocoder.sh
 ADD ./sync_tables_trigger.sh /cartodb/script/sync_tables_trigger.sh
 ENV PATH /usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-#RUN  sed -i '/config.assets.initialize_on_precompile = true/a \ \ config.force_ssl = true' /cartodb/config/environments/development.rb \
-#     && sed -i 's/base_url: public_url/base_url: public_url.sub(\x27http\x27,\x27https\x27)/' /cartodb/app/models/user/user_decorator.rb
-RUN mkdir -p /etc/letsencrypt && mkdir -p /cartodb/log && touch /cartodb/log/users_modifications && \
+RUN mkdir -p /cartodb/log && touch /cartodb/log/users_modifications && \
     /opt/varnish/sbin/varnishd -a :6081 -T localhost:6082 -s malloc,256m -f /etc/varnish.vcl && \
     perl -pi.bak -e 's/^bind 127.0.0.1 ::1$/bind 0.0.0.0/' /etc/redis/redis.conf && \
     service postgresql start && service redis-server start && \
